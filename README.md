@@ -1,0 +1,2 @@
+# yololl-tutorial
+ Yolo-treinado.

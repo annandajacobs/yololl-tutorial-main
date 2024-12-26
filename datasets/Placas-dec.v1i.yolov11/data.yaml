@@ -1,0 +1,13 @@
+train: /home/estagiario-tarde/yololl-tutorial/datasets/Placas-dec.v1i.yolov11/train/images
+val: /home/estagiario-tarde/yololl-tutorial/datasets/Placas-dec.v1i.yolov11/valid/images
+test: /home/estagiario-tarde/yololl-tutorial/datasets/Placas-dec.v1i.yolov11/test/images
+
+nc: 4
+names: ['Placa_antiga_carro', 'Placa_antiga_moto', 'Placa_mercosul_carro', 'Placa_mercosul_moto']
+
+roboflow:
+  workspace: teste-de-placas
+  project: placas-dec
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/teste-de-placas/placas-dec/dataset/1
