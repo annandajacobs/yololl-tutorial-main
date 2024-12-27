@@ -53,11 +53,15 @@ while True:
 
             # Melhorar a imagem para OCR
             placa_gray = cv2.cvtColor(placa, cv2.COLOR_BGR2GRAY)  # Converter para escala de cinza
-            _, placa_thresh = cv2.threshold(placa_gray, 127, 255, cv2.THRESH_BINARY)  # Limite fixo
+
+            # Limiarização de Otsu
+            _, placa_thresh = cv2.threshold(placa_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            # Opcional: Filtragem adicional
             placa_filtered = cv2.GaussianBlur(placa_thresh, (5, 5), 0)
 
             # Realizar OCR na região recortada
-            texto_placa = pytesseract.image_to_string(placa_filtered, config="--psm 8")  # Teste com psm 8
+            texto_placa = pytesseract.image_to_string(placa_thresh, config="--psm 8")  # Teste com psm 8
 
             # Limpeza do texto reconhecido
             texto_placa = ''.join(e for e in texto_placa if e.isalnum())
@@ -84,4 +88,5 @@ while True:
 # Liberar recursos
 cap.release()
 cv2.destroyAllWindows()
+
 
