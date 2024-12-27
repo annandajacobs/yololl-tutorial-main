@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 
 # Carregar o modelo YOLO treinado (substitua pelo caminho do modelo treinado)
-model_path = "runs/detect/train3/weights/best.pt"
+model_path = "Yolo-tutov2/Placas-dec.v4i.yolov11/train/runs/detect/train/weights/best.pt"
 model = YOLO(model_path)
 
 # Configurar o feed da webcam
@@ -29,7 +29,7 @@ while True:
     results = model(img)
 
     # Limiar de confiança (ajuste conforme necessário, exemplo 0.5)
-    confidence_threshold = 0.5
+    confidence_threshold = 0.4
 
     # Acessando as caixas delimitadoras
     detections = results[0].boxes
