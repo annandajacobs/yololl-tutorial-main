@@ -1,5 +1,6 @@
 import cv2
 from ultralytics import YOLO
+import pytesseract
 
 # Carregar o modelo YOLO treinado (substitua pelo caminho do modelo treinado)
 model_path = "Yolo-tutov2/Placas-dec.v4i.yolov11/train/runs/detect/train/weights/best.pt"
@@ -29,7 +30,7 @@ while True:
     results = model(img)
 
     # Limiar de confiança (ajuste conforme necessário, exemplo 0.5)
-    confidence_threshold = 0.4
+    confidence_threshold = 0.5
 
     # Acessando as caixas delimitadoras
     detections = results[0].boxes
@@ -47,6 +48,22 @@ while True:
         # Filtrando a classe que representa "placa"
         if cls in model.names:  # Verifica se a classe detectada está nas classes treinadas
             label = f"{model.names[cls]} {conf:.2f}"
+
+            placa = frame[y1:y2, x1:x2]
+
+            # Melhorar a imagem para OCR
+            placa_gray = cv2.cvtColor(placa, cv2.COLOR_BGR2GRAY)  # Converter para escala de cinza
+            _, placa_thresh = cv2.threshold(placa_gray, 127, 255, cv2.THRESH_BINARY)  # Limite fixo
+            placa_filtered = cv2.GaussianBlur(placa_thresh, (5, 5), 0)
+
+            # Realizar OCR na região recortada
+            texto_placa = pytesseract.image_to_string(placa_filtered, config="--psm 8")  # Teste com psm 8
+
+            # Limpeza do texto reconhecido
+            texto_placa = ''.join(e for e in texto_placa if e.isalnum())
+
+            # Exibir o texto reconhecido
+            cv2.putText(frame, f"Texto: {texto_placa.strip()}", (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
             # Desenhar a caixa delimitadora e o rótulo
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -67,3 +84,4 @@ while True:
 # Liberar recursos
 cap.release()
 cv2.destroyAllWindows()
+
