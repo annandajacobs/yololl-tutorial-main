@@ -1,6 +1,7 @@
 import cv2
 from ultralytics import YOLO
 import pytesseract
+import re
 
 # Carregar o modelo YOLO treinado (substitua pelo caminho do modelo treinado)
 model_path = "Yolo-tutov2/Placas-dec.v4i.yolov11/train/runs/detect/train/weights/best.pt"
@@ -66,8 +67,12 @@ while True:
             # Limpeza do texto reconhecido
             texto_placa = ''.join(e for e in texto_placa if e.isdigit() or e.isupper())
 
-            # Exibir o texto reconhecido
-            cv2.putText(frame, f"Texto: {texto_placa.strip()}", (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            texto_extraido = re.search(r'\w{3}\d{1}\w{1}\d{2}', texto_placa)
+
+            if texto_extraido:
+                # Exibir o texto extraído (exemplo de uma placa no formato desejado)
+                texto_placa = texto_extraido.group()  # Extrai o texto que corresponde ao padrão
+                cv2.putText(frame, f"Texto: {texto_placa.strip()}", (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
             # Desenhar a caixa delimitadora e o rótulo
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)

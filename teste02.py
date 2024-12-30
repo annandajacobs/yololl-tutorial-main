@@ -49,6 +49,14 @@ while True:
         if cls in model.names:  # Verifica se a classe detectada está nas classes treinadas
             label = f"{model.names[cls]} {conf:.2f}"
 
+            # Expandir a caixa delimitadora (adicione uma margem)
+            margin = 20  # Margem para expandir a caixa
+            x1 = max(x1 - margin, 0)  # Garantir que não ultrapasse os limites da imagem
+            y1 = max(y1 - margin, 0)
+            x2 = min(x2 + margin, frame.shape[1])  # Garantir que não ultrapasse os limites da imagem
+            y2 = min(y2 + margin, frame.shape[0])
+
+            # Recortar a região da placa com a caixa expandida
             placa = frame[y1:y2, x1:x2]
 
             # Melhorar a imagem para OCR
@@ -69,7 +77,7 @@ while True:
             # Exibir o texto reconhecido
             cv2.putText(frame, f"Texto: {texto_placa.strip()}", (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
-            # Desenhar a caixa delimitadora e o rótulo
+            # Desenhar a caixa delimitadora expandida e o rótulo
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             detected = True  # Marcar que uma placa foi detectada
@@ -90,5 +98,4 @@ while True:
 # Liberar recursos
 cap.release()
 cv2.destroyAllWindows()
-
 
