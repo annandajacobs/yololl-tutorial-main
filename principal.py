@@ -78,12 +78,13 @@ while True:
                 ultimo_texto_placa = texto_extraido.group()  # Atualizar com o último texto detectado
 
             # Exibir o texto reconhecido na janela de detecção
-            cv2.putText(frame, f"Placa: {ultimo_texto_placa.strip()}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            if conf >= 0.7: 
+                cv2.putText(frame, f"Placa: {ultimo_texto_placa.strip()}", (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+                detected = True 
 
             # Desenhar a caixa delimitadora e o rótulo
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            detected = True  # Marcar que uma placa foi detectada
+            #cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            #cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     # Se não detectar nenhuma placa, mostrar a mensagem "Nenhuma placa detectada"
     if not detected:
@@ -92,8 +93,11 @@ while True:
     # Mostrar a imagem com as detecções
     cv2.imshow("Detecção de Placas", frame)
 
+    #cv2.imshow('_', erosao)
+
     # Parar com a tecla 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        print(texto_extraido)
         break
 
 # Liberar recursos

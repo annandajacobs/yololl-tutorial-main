@@ -2,20 +2,28 @@ import cv2
 from ultralytics import YOLO
 import pytesseract
 import re
+import time
 
-# Carregar o modelo YOLO treinado (substitua pelo caminho do modelo treinado)
+# Carregar o modelo YOLO treinado
 model_path = "Yolo-tutov2/Placas-dec.v4i.yolov11/train/runs/detect/train/weights/best.pt"
 model = YOLO(model_path)
 
-# Configurar o feed da webcam
-camera_index = 0  # Índice da webcam (normalmente 0 para a câmera padrão)
+# Variável para rastrear placas detectadas e seu tempo de permanência
+rastreamento_placas = {}
 
+# Tempo mínimo em segundos para considerar que uma placa esteve presente
+tempo_minimo_presenca = 5  # 5 segundos
+
+# Intervalo máximo sem detecção antes de remover uma placa
+tempo_limite_sem_deteccao = 30  # 3 segundos
+
+# Configurar o feed da webcam
+camera_index = 0
 cap = cv2.VideoCapture(camera_index)
 if not cap.isOpened():
     print("Erro ao acessar a webcam.")
     exit()
 
-# Criar uma janela para exibir as detecções
 cv2.namedWindow("Detecção de Placas", cv2.WINDOW_NORMAL)
 
 while True:
@@ -24,74 +32,77 @@ while True:
         print("Falha ao capturar frame da webcam.")
         break
 
-    # Convertendo a imagem para o formato esperado pelo modelo (OpenCV usa BGR, enquanto YOLO usa RGB)
-    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # Tempo atual em segundos
+    tempo_atual = time.time()
 
-    # Fazer a inferência usando o modelo YOLO
+    # Converter imagem para o formato esperado pelo YOLO
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = model(img, conf=0.5, iou=0.4)
 
-    # Limiar de confiança (ajuste conforme necessário, exemplo 0.5)
-    confidence_threshold = 0.5
-
-    # Acessando as caixas delimitadoras
+    # Acessando caixas delimitadoras
     detections = results[0].boxes
-
-    detected = False  # Flag para verificar se uma placa foi detectada
+    detected_placas = set()  # Para evitar múltiplas detecções da mesma placa no mesmo frame
 
     for box in detections:
-        conf = box.conf[0].cpu().numpy()  # Confiança da detecção
-        if conf < confidence_threshold:
-            continue  # Ignorar detecções com baixa confiança
+        conf = box.conf[0].cpu().numpy()
+        if conf < 0.5:
+            continue
 
-        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)  # Coordenadas (x1, y1, x2, y2)
-        cls = int(box.cls[0].cpu().numpy())  # Converter cls para um inteiro
+        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+        cls = int(box.cls[0].cpu().numpy())
 
-        # Filtrando a classe que representa "placa"
-        if cls in model.names:  # Verifica se a classe detectada está nas classes treinadas
-            label = f"{model.names[cls]} {conf:.2f}"
-
+        if cls in model.names:
             placa = frame[y1:y2, x1:x2]
-
-            # Melhorar a imagem para OCR
-            placa_gray = cv2.cvtColor(placa, cv2.COLOR_BGR2GRAY)  # Converter para escala de cinza
-
-            # Opcional: Filtragem adicional
-            placa_filtered = cv2.GaussianBlur(placa_gray, (5, 5), 0)
-
-            # Limiarização de Otsu
+            placa_gray = cv2.cvtColor(placa, cv2.COLOR_BGR2GRAY)
             _, placa_thresh = cv2.threshold(placa_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-            # Realizar OCR na região recortada
-            texto_placa = pytesseract.image_to_string(placa_thresh, config="--psm 8")  # Teste com psm 8
-
-            # Limpeza do texto reconhecido
+            # OCR para extrair texto da placa
+            texto_placa = pytesseract.image_to_string(placa_thresh, config="--psm 11")
             texto_placa = ''.join(e for e in texto_placa if e.isdigit() or e.isupper())
-
             texto_extraido = re.search(r'\w{3}\d{1}\w{1}\d{2}', texto_placa)
 
             if texto_extraido:
-                # Exibir o texto extraído (exemplo de uma placa no formato desejado)
-                texto_placa = texto_extraido.group()  # Extrai o texto que corresponde ao padrão
-                cv2.putText(frame, f"Texto: {texto_placa.strip()}", (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                texto_detectado = texto_extraido.group()
 
-            # Desenhar a caixa delimitadora e o rótulo
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            detected = True  # Marcar que uma placa foi detectada
+                # Atualizar rastreamento de placas
+                if texto_detectado not in rastreamento_placas:
+                    rastreamento_placas[texto_detectado] = {"inicio": tempo_atual, "ultimo": tempo_atual}
+                else:
+                    rastreamento_placas[texto_detectado]["ultimo"] = tempo_atual
 
-    # Se não detectar nenhuma placa, mostrar a mensagem "Nenhuma placa detectada"
-    if not detected:
-        frame = cv2.putText(frame, "Nenhuma placa detectada", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+                detected_placas.add(texto_detectado)
 
-    # Mostrar a imagem com as detecções
+                # Exibir placa no frame
+                cv2.putText(frame, f"Placa: {texto_detectado}", (x1, y2 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+
+    # Remover placas que não foram detectadas recentemente
+    placas_para_remover = []
+    for placa, tempos in rastreamento_placas.items():
+        if placa not in detected_placas and (tempo_atual - tempos["ultimo"]) > tempo_limite_sem_deteccao:
+            placas_para_remover.append(placa)
+
+    for placa in placas_para_remover:
+        rastreamento_placas.pop(placa)
+
+    # Mostrar a mensagem "Nenhuma placa detectada"
+    if not detected_placas:
+        cv2.putText(frame, "Nenhuma placa detectada", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+
+    # Exibir a imagem
     cv2.imshow("Detecção de Placas", frame)
 
-    cv2.imshow('_', placa_thresh)
-
-    # Parar com a tecla 'q'
+    # Pressione 'q' para sair
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+# Após o loop, exibir placas que permaneceram pelo tempo mínimo
+print("Placas que permaneceram pelo tempo mínimo:")
+for placa, tempos in rastreamento_placas.items():
+    tempo_presente = tempos["ultimo"] - tempos["inicio"]
+    if tempo_presente >= tempo_minimo_presenca:
+        print(f"Placa: {placa} - Tempo: {tempo_presente:.2f} segundos")
 
 # Liberar recursos
 cap.release()
 cv2.destroyAllWindows()
+

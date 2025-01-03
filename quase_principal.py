@@ -89,11 +89,11 @@ while True:
     cv2.imshow("Detecção de Placas", frame)
 
     # Mostrar imagem processada para verificar o OCR
-    cv2.imshow('_', placa_thresh)
+    #cv2.imshow('_', placa_thresh)
 
     # Parar com a tecla 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        print(texto_extraido)
+        print(texto_da_placa)
         break
 
 # Liberar recursos
